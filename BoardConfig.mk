@@ -36,6 +36,8 @@ TARGET_NO_BOOTLOADER := true
 
 BOARD_KERNEL_BASE := 0x80000000
 # BOARD_KERNEL_CMDLINE :=
+TARGET_NO_KERNEL := false
+KERNEL_CONFIG := tuna_defconfig
 
 # Define kernel config for inline building
 TARGET_KERNEL_CONFIG := cyanogenmod_tuna_defconfig
