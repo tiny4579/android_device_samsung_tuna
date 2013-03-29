@@ -27,7 +27,14 @@
 
 #define SCALINGMAXFREQ_PATH "/sys/devices/system/cpu/cpu0/cpufreq/scaling_max_freq"
 #define SCREENOFFMAXFREQ_PATH "/sys/devices/system/cpu/cpu0/cpufreq/screen_off_max_freq"
-#define BOOSTPULSE_PATH "/sys/devices/system/cpu/cpufreq/interactive/boostpulse"
+#define SCALING_GOVERNOR_PATH "/sys/devices/system/cpu/cpu0/cpufreq/scaling_governor"
+#define BOOSTPULSE_ONDEMAND "/sys/devices/system/cpu/cpufreq/ondemand/boostpulse"
+#define BOOSTPULSE_KTOONSERVATIVE "/sys/devices/system/cpu/cpufreq/ktoonservative/boostpulse"
+#define BOOSTPULSE_INTERACTIVE "/sys/devices/system/cpu/cpufreq/interactive/boostpulse"
+#define SAMPLING_RATE_SCREEN_ON "50000"
+#define SAMPLING_RATE_SCREEN_OFF "500000"
+#define TIMER_RATE_SCREEN_ON "30000"
+#define TIMER_RATE_SCREEN_OFF "500000"
 
 #define MAX_BUF_SZ  10
 
@@ -41,6 +48,8 @@ struct tuna_power_module {
     int boostpulse_fd;
     int boostpulse_warned;
 };
+
+static char governor[20];
 
 static void sysfs_write(char *path, char *s)
 {
@@ -80,6 +89,23 @@ int sysfs_read(const char *path, char *buf, size_t size)
   return len;
 }
 
+static int get_scaling_governor() {
+    if (sysfs_read(SCALING_GOVERNOR_PATH, governor,
+                sizeof(governor)) == -1) {
+        return -1;
+    } else {
+        // Strip newline at the end.
+        int len = strlen(governor);
+
+        len--;
+
+        while (len >= 0 && (governor[len] == '\n' || governor[len] == '\r'))
+            governor[len--] = '\0';
+    }
+
+    return 0;
+}
+
 static void tuna_power_init(struct power_module *module)
 {
     /*
@@ -106,13 +132,23 @@ static int boostpulse_open(struct tuna_power_module *tuna)
     pthread_mutex_lock(&tuna->lock);
 
     if (tuna->boostpulse_fd < 0) {
-        tuna->boostpulse_fd = open(BOOSTPULSE_PATH, O_WRONLY);
+        if (get_scaling_governor() < 0) {
+            ALOGE("Can't read scaling governor.");
+            tuna->boostpulse_warned = 1;
+        } else {
+            if (strncmp(governor, "ondemand", 8) == 0)
+                tuna->boostpulse_fd = open(BOOSTPULSE_ONDEMAND, O_WRONLY);
+            else if (strncmp(governor, "ktoonservative", 14) == 0)
+                tuna->boostpulse_fd = open(BOOSTPULSE_KTOONSERVATIVE, O_WRONLY);
+            else if (strncmp(governor, "interactive", 11) == 0)
+                tuna->boostpulse_fd = open(BOOSTPULSE_INTERACTIVE, O_WRONLY);
 
-        if (tuna->boostpulse_fd < 0) {
-            if (!tuna->boostpulse_warned) {
+            if (tuna->boostpulse_fd < 0 && !tuna->boostpulse_warned) {
                 strerror_r(errno, buf, sizeof(buf));
-                ALOGE("Error opening %s: %s\n", BOOSTPULSE_PATH, buf);
+                ALOGV("Error opening boostpulse: %s\n", buf);
                 tuna->boostpulse_warned = 1;
+            } else if (tuna->boostpulse_fd > 0) {
+                ALOGD("Opened %s boostpulse interface", governor);
             }
         }
     }
@@ -146,6 +182,10 @@ static void tuna_power_set_interactive(struct power_module *module, int on)
         sysfs_write(SCALINGMAXFREQ_PATH, screen_off_max_freq);
     } else
         sysfs_write(SCALINGMAXFREQ_PATH, scaling_max_freq);
+
+    if (strncmp(governor, "ondemand", 8) == 0)
+        sysfs_write("/sys/devices/system/cpu/cpufreq/ondemand/sampling_rate",
+                on ? SAMPLING_RATE_SCREEN_ON : SAMPLING_RATE_SCREEN_OFF);
 }
 
 static void tuna_power_hint(struct power_module *module, power_hint_t hint,
@@ -159,16 +199,22 @@ static void tuna_power_hint(struct power_module *module, power_hint_t hint,
     switch (hint) {
     case POWER_HINT_INTERACTION:
     case POWER_HINT_CPU_BOOST:
-        if (data != NULL)
-            duration = (int) data;
-
         if (boostpulse_open(tuna) >= 0) {
+            if (data != NULL)
+                duration = (int) data;
+
             snprintf(buf, sizeof(buf), "%d", duration);
             len = write(tuna->boostpulse_fd, buf, strlen(buf));
 
             if (len < 0) {
                 strerror_r(errno, buf, sizeof(buf));
-                ALOGE("Error writing to %s: %s\n", BOOSTPULSE_PATH, buf);
+                ALOGE("Error writing to boostpulse: %s\n", buf);
+
+                pthread_mutex_lock(&tuna->lock);
+                close(tuna->boostpulse_fd);
+                tuna->boostpulse_fd = -1;
+                tuna->boostpulse_warned = 0;
+                pthread_mutex_unlock(&tuna->lock);
             }
         }
         break;
