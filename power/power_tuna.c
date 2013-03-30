@@ -106,23 +106,64 @@ static int get_scaling_governor() {
     return 0;
 }
 
+static void tuna_power_set_interactive(struct power_module *module, int on)
+{
+    if (strncmp(governor, "ondemand", 8) == 0)
+        sysfs_write("/sys/devices/system/cpu/cpufreq/ondemand/sampling_rate",
+                on ? SAMPLING_RATE_SCREEN_ON : SAMPLING_RATE_SCREEN_OFF);
+    else if (strncmp(governor, "interactive", 11) == 0) 
+    {
+        int len;
+
+        char buf[MAX_BUF_SZ];
+
+        /*
+        * Lower maximum frequency when screen is off.  CPU 0 and 1 share a
+        * cpufreq policy.
+        */
+        if (!on) {
+            /* read the current scaling max freq and save it before updating */
+            len = sysfs_read(SCALINGMAXFREQ_PATH, buf, sizeof(buf));
+
+            /* make sure it's not the screen off freq, if the "on"
+            * call is skipped (can happen if you press the power
+            * button repeatedly) we might have read it. We should
+            * skip it if that's the case
+            */
+            if (len != -1 && strncmp(buf, screen_off_max_freq,
+                    strlen(screen_off_max_freq)) != 0)
+                memcpy(scaling_max_freq, buf, sizeof(buf));
+            sysfs_write(SCALINGMAXFREQ_PATH, screen_off_max_freq);
+        } else
+            sysfs_write(SCALINGMAXFREQ_PATH, scaling_max_freq);
+        sysfs_write("/sys/devices/system/cpu/cpufreq/interactive/timer_rate",
+                on ? TIMER_RATE_SCREEN_ON : TIMER_RATE_SCREEN_OFF);
+    }
+}
+
+static void configure_governor()
+{
+    tuna_power_set_interactive(NULL, 1);
+
+    if (strncmp(governor, "ondemand", 8) == 0) {
+        sysfs_write("/sys/devices/system/cpu/cpufreq/ondemand/up_threshold", "90");
+        sysfs_write("/sys/devices/system/cpu/cpufreq/ondemand/io_is_busy", "1");
+        sysfs_write("/sys/devices/system/cpu/cpufreq/ondemand/sampling_down_factor", "4");
+        sysfs_write("/sys/devices/system/cpu/cpufreq/ondemand/down_differential", "10");
+
+    } else if (strncmp(governor, "interactive", 11) == 0) {
+        sysfs_write("/sys/devices/system/cpu/cpufreq/interactive/min_sample_time", "60000");
+        sysfs_write("/sys/devices/system/cpu/cpufreq/interactive/go_hispeed_load", "75");
+        sysfs_write("/sys/devices/system/cpu/cpufreq/interactive/io_is_busy", "1");
+        sysfs_write("/sys/devices/system/cpu/cpufreq/interactive/hispeed_freq", "700000");
+        sysfs_write("/sys/devices/system/cpu/cpufreq/interactive/above_hispeed_delay", "30000");
+    }
+}
+
 static void tuna_power_init(struct power_module *module)
 {
-    /*
-     * cpufreq interactive governor: timer 20ms, min sample 60ms,
-     * hispeed 700MHz at load 50%.
-     */
-
-    sysfs_write("/sys/devices/system/cpu/cpufreq/interactive/timer_rate",
-                "20000");
-    sysfs_write("/sys/devices/system/cpu/cpufreq/interactive/min_sample_time",
-                "60000");
-    sysfs_write("/sys/devices/system/cpu/cpufreq/interactive/hispeed_freq",
-                "700000");
-    sysfs_write("/sys/devices/system/cpu/cpufreq/interactive/go_hispeed_load",
-                "50");
-    sysfs_write("/sys/devices/system/cpu/cpufreq/interactive/above_hispeed_delay",
-                "100000");
+    get_scaling_governor();
+    configure_governor();
 }
 
 static int boostpulse_open(struct tuna_power_module *tuna)
@@ -148,6 +189,7 @@ static int boostpulse_open(struct tuna_power_module *tuna)
                 ALOGV("Error opening boostpulse: %s\n", buf);
                 tuna->boostpulse_warned = 1;
             } else if (tuna->boostpulse_fd > 0) {
+                configure_governor();
                 ALOGD("Opened %s boostpulse interface", governor);
             }
         }
@@ -155,37 +197,6 @@ static int boostpulse_open(struct tuna_power_module *tuna)
 
     pthread_mutex_unlock(&tuna->lock);
     return tuna->boostpulse_fd;
-}
-
-static void tuna_power_set_interactive(struct power_module *module, int on)
-{
-    int len;
-
-    char buf[MAX_BUF_SZ];
-
-    /*
-     * Lower maximum frequency when screen is off.  CPU 0 and 1 share a
-     * cpufreq policy.
-     */
-    if (!on) {
-        /* read the current scaling max freq and save it before updating */
-        len = sysfs_read(SCALINGMAXFREQ_PATH, buf, sizeof(buf));
-
-        /* make sure it's not the screen off freq, if the "on"
-         * call is skipped (can happen if you press the power
-         * button repeatedly) we might have read it. We should
-         * skip it if that's the case
-         */
-        if (len != -1 && strncmp(buf, screen_off_max_freq,
-                strlen(screen_off_max_freq)) != 0)
-            memcpy(scaling_max_freq, buf, sizeof(buf));
-        sysfs_write(SCALINGMAXFREQ_PATH, screen_off_max_freq);
-    } else
-        sysfs_write(SCALINGMAXFREQ_PATH, scaling_max_freq);
-
-    if (strncmp(governor, "ondemand", 8) == 0)
-        sysfs_write("/sys/devices/system/cpu/cpufreq/ondemand/sampling_rate",
-                on ? SAMPLING_RATE_SCREEN_ON : SAMPLING_RATE_SCREEN_OFF);
 }
 
 static void tuna_power_hint(struct power_module *module, power_hint_t hint,
