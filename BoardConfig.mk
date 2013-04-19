@@ -40,8 +40,8 @@ TARGET_NO_KERNEL := false
 KERNEL_CONFIG := tuna_defconfig
 
 # Define kernel config for inline building
-TARGET_KERNEL_CONFIG := cyanogenmod_tuna_defconfig
-TARGET_KERNEL_SOURCE := kernel/samsung/tuna
+#TARGET_KERNEL_CONFIG := cyanogenmod_tuna_defconfig
+#TARGET_KERNEL_SOURCE := kernel/samsung/tuna
 
 TARGET_PREBUILT_KERNEL := device/samsung/tuna/kernel
 
