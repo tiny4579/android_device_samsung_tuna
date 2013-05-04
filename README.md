@@ -1,7 +1,7 @@
 CM10.1 for the Galaxy Nexus
 
 ## Info
-[**XDA Discussion thread**](http://forum.xda-developers.com/showthread.php?t=1882918)
+[**XDA Discussion thread**](http://forum.xda-developers.com/showthread.php?t=2235365)
 
 ### Initialize
 [Setup Linux/OS X](http://source.android.com/source/initializing.html) - Please note: it must be sun-java-6, not openjdk
