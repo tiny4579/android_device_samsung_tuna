@@ -2,6 +2,7 @@ CM10.1 for the Galaxy Nexus
 
 ## Info
 [**XDA Discussion thread**](http://forum.xda-developers.com/showthread.php?t=2235365)
+[**Rootz Discussion thread**](http://rootzwiki.com/topic/40291-rom422linaro-cm101-unofficial-builds/)
 
 ### Initialize
 [Setup Linux/OS X](http://source.android.com/source/initializing.html) - Please note: it must be sun-java-6, not openjdk
@@ -120,7 +121,6 @@ Then set the environment variables as shown below
 export USE_LINARO_COMPILER_FLAGS=yes
 export ANDROID_EABI_TOOLCHAIN_DIR=linaro-4.7
 export ARM_EABI_TOOLCHAIN_DIR=linaro-4.7
-export DEBUG_NO_STRICT_ALIASING=yes
 ```
 You will also need to pull the Linaro specific local_manifest (This requires a recent version of repo)
 ```bash
