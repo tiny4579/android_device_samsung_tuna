@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<manifest>
+  <remote fetch="http://github.com/" name="gh" revision="master" />
+  <remote fetch="https://github.com/TheMuppets/" name="TheMuppets" revision="cm-10.1" />
+  <remote fetch="git://android.git.linaro.org/" name="linaro" />
+  <project name="proprietary_vendor_samsung" path="vendor/samsung" remote="TheMuppets" />
+  <project name="proprietary_vendor_imgtec" path="vendor/imgtec" remote="TheMuppets" />
+  <project name="proprietary_vendor_broadcom" path="vendor/broadcom" remote="TheMuppets" />
+  <project name="proprietary_vendor_invensense" path="vendor/invensense" remote="TheMuppets" />
+</manifest>
