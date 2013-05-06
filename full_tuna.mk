@@ -33,6 +33,3 @@ PRODUCT_NAME := full_tuna
 PRODUCT_DEVICE := tuna
 PRODUCT_BRAND := Android
 PRODUCT_MODEL := Full AOSP on Tuna
-
-PRODUCT_COPY_FILES += \
-    device/samsung/tuna/prebuilt/bin/hostapd:system/bin/hostapd
