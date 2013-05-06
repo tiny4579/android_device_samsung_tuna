@@ -40,8 +40,10 @@ TARGET_NO_KERNEL := false
 KERNEL_CONFIG := tuna_defconfig
 
 # Define kernel config for inline building
-#TARGET_KERNEL_CONFIG := cyanogenmod_tuna_defconfig
-#TARGET_KERNEL_SOURCE := kernel/samsung/tuna
+TARGET_KERNEL_CONFIG := cyanogenmod_tuna_defconfig
+TARGET_KERNEL_SOURCE := kernel/samsung/tuna
+
+KERNEL_TOOLCHAIN_PREFIX:=$(ANDROID_BUILD_TOP)/prebuilts/gcc/linux-x86/arm/arm-eabi-4.6/bin/arm-eabi-
 
 TARGET_PREBUILT_KERNEL := device/samsung/tuna/kernel
 
