@@ -36,16 +36,21 @@ TARGET_NO_BOOTLOADER := true
 
 BOARD_KERNEL_BASE := 0x80000000
 # BOARD_KERNEL_CMDLINE :=
+TARGET_NO_KERNEL := false
+KERNEL_CONFIG := tuna_defconfig
 
 # Define kernel config for inline building
 TARGET_KERNEL_CONFIG := cyanogenmod_tuna_defconfig
 TARGET_KERNEL_SOURCE := kernel/samsung/tuna
+
+KERNEL_TOOLCHAIN_PREFIX:=$(ANDROID_BUILD_TOP)/prebuilts/gcc/linux-x86/arm/arm-eabi-4.6/bin/arm-eabi-
 
 TARGET_PREBUILT_KERNEL := device/samsung/tuna/kernel
 
 TARGET_NO_RADIOIMAGE := true
 TARGET_BOARD_PLATFORM := omap4
 TARGET_BOOTLOADER_BOARD_NAME := tuna
+TARGET_USE_GATOR := true
 
 BOARD_EGL_CFG := device/samsung/tuna/egl.cfg
 BOARD_CREATE_TUNA_HDCP_KEYS_SYMLINK := true
@@ -100,3 +105,6 @@ BOARD_USES_SECURE_SERVICES := true
 BOARD_HAS_NO_SELECT_BUTTON := true
 BOARD_CUSTOM_RECOVERY_KEYMAPPING := ../../device/samsung/tuna/recovery_keys.c
 BOARD_USE_CUSTOM_RECOVERY_FONT := \"roboto_15x24.h\"
+TARGET_EXTRA_CFLAGS := $(call cc-ifversion, -ge, 46, $(call cc-option,-mtune=cortex-a9,$(call cc-option,-mtune=cortex-a8)) $(call cc-option,-mcpu=cortex-a9,$(call cc-option,-mcpu=cortex-a8)))
+
+TARGET_BOOTLOADER_TYPE := fastboot
